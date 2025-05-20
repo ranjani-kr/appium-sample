@@ -20,6 +20,7 @@ public class BaseTest {
     @BeforeClass
     public void setUp() throws URISyntaxException, MalformedURLException {
         String appiumPath = System.getenv("APPIUM_JS_PATH");
+        String deviceName = System.getenv().getOrDefault("ANDROID_DEVICE_NAME", "Android Emulator");
         service = new AppiumServiceBuilder()
                 .withAppiumJS(new File(appiumPath))
                 .withIPAddress("127.0.0.1")
@@ -29,7 +30,7 @@ public class BaseTest {
 
 
         UiAutomator2Options options = new UiAutomator2Options();
-        options.setDeviceName("emulator-5554");
+        options.setDeviceName(deviceName);
         options.setApp("/Users/ranjani/IdeaProjects/AppiumProject/app/src/test/resources/ApiDemos-debug.apk");
         driver = new AndroidDriver(new URI("http://127.0.0.1:4723").toURL(),options);
 
