@@ -1,0 +1,48 @@
+# Java build and class files
+*.class
+*.jar
+*.war
+*.ear
+target/
+build/
+app/build/
+**/build/
+
+
+# Logs
+*.log
+
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# Mac system files
+.DS_Store
+
+# Node modules (if using JS or npm packages)
+node_modules/
+
+# Appium specific folders (if any)
+appium.log
+
+# Environment files
+.env
+
+# Android related (if included)
+
+.gradle/
+local.properties
+.cxx/
+# Ignore Gradle project-specific cache directory
+.gradle
+
+
+# Ignore Gradle build output directory
+build
+!important-app/build/outputs/apk/debug/app-debug.apk
