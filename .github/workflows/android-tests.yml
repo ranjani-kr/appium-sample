@@ -9,7 +9,6 @@ on:
 env:
   ANDROID_DEVICE_NAME: Android Emulator
 
-
 jobs:
   appium-test:
     runs-on: ubuntu-latest
@@ -41,9 +40,28 @@ jobs:
           arch: x86_64
           profile: Nexus 6
           script: |
+            echo "Checking ADB devices..."
             adb devices
+            
+            echo "Waiting for emulator to be ready..."
             adb wait-for-device
-            adb shell getprop sys.boot_completed
-            echo "Running Appium tests now..."
+
+            # Retry until boot is complete
+            boot_status=""
+            retries=0
+            while [[ "$boot_status" != "1" && $retries -lt 10 ]]; do
+              sleep 10
+              boot_status=$(adb shell getprop sys.boot_completed | tr -d '\r')
+              echo "Boot status: $boot_status"
+              retries=$((retries + 1))
+            done
+
+            if [[ "$boot_status" != "1" ]]; then
+              echo "❌ Emulator failed to boot in time"
+              exit 1
+            fi
+
+            echo "✅ Emulator ready. Running Appium tests..."
             export APPIUM_JS_PATH=/usr/local/bin/appium
+
             ./gradlew test
