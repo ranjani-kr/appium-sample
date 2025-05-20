@@ -8,12 +8,11 @@ on:
 
 env:
   ANDROID_DEVICE_NAME: Android Emulator
-  APPIUM_JS_PATH: /usr/local/bin/appium
 
 jobs:
   appium-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout code
@@ -33,50 +32,55 @@ jobs:
       - name: Install Appium CLI
         run: npm install -g appium
 
-      - name: Set up Android Emulator and Run Tests
+      - name: Start Android Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 29
           target: google_apis
           arch: x86_64
           profile: Nexus 6
+          headless: true
           disable-animations: true
-          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim
-          script: |
-            echo "🔄 Waiting for emulator to come online..."
-            retries=0
-            max_retries=15
-            while [[ $retries -lt $max_retries ]]; do
-              device_status=$(adb devices | grep emulator | awk "{print \$2}")
-              if [[ "$device_status" == "device" ]]; then
-                echo "✅ Emulator is online."
-                break
-              fi
-              echo "⏳ Emulator not ready yet... retry $((retries+1))/$max_retries"
-              adb devices
-              sleep 10
-              retries=$((retries + 1))
-            done
+          no-snapshot-save: true
 
-            if [[ "$device_status" != "device" ]]; then
-              echo "❌ Emulator never came online."
-              exit 1
+      - name: Wait for emulator and run tests
+        shell: bash
+        run: |
+          echo "🔄 Waiting for emulator to be fully online..."
+          retries=0
+          max_retries=15
+          while [[ $retries -lt $max_retries ]]; do
+            device_status=$(adb devices | grep emulator | awk '{print $2}')
+            if [[ "$device_status" == "device" ]]; then
+              echo "✅ Emulator is online."
+              break
             fi
+            echo "⏳ Emulator not ready yet... retry $((retries+1))/$max_retries"
+            adb devices
+            sleep 10
+            retries=$((retries + 1))
+          done
 
-            echo "🟡 Checking for boot completion..."
-            boot_status=""
-            retries=0
-            while [[ "$boot_status" != "1" && $retries -lt 10 ]]; do
-              sleep 10
-              boot_status=$(adb shell getprop sys.boot_completed | tr -d "\r")
-              echo "Boot status: $boot_status"
-              retries=$((retries + 1))
-            done
+          if [[ "$device_status" != "device" ]]; then
+            echo "❌ Emulator never came online."
+            exit 1
+          fi
 
-            if [[ "$boot_status" != "1" ]]; then
-              echo "❌ Emulator failed to finish booting."
-              exit 1
-            fi
+          echo "🟡 Checking for boot completion..."
+          boot_status=""
+          retries=0
+          while [[ "$boot_status" != "1" && $retries -lt 10 ]]; do
+            sleep 10
+            boot_status=$(adb shell getprop sys.boot_completed | tr -d '\r')
+            echo "Boot status: $boot_status"
+            retries=$((retries + 1))
+          done
 
-            echo "✅ Emulator is fully ready. Starting Appium tests..."
-            ./gradlew test
+          if [[ "$boot_status" != "1" ]]; then
+            echo "❌ Emulator failed to finish booting."
+            exit 1
+          fi
+
+          echo "✅ Emulator is fully ready. Running Appium tests..."
+          export APPIUM_JS_PATH=/usr/local/bin/appium
+          ./gradlew test
