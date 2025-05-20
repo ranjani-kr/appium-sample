@@ -35,18 +35,35 @@ jobs:
       - name: Set up Android Emulator and Run Tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30
+          api-level: 29
           target: google_apis
           arch: x86_64
           profile: Nexus 6
+          headless: true
+          disable-animations: true
+          no-snapshot-save: true
           script: |
-            echo "Checking ADB devices..."
-            adb devices
-            
-            echo "Waiting for emulator to be ready..."
-            adb wait-for-device
+            echo "🔄 Waiting for emulator to come online..."
+            retries=0
+            max_retries=15
+            while [[ $retries -lt $max_retries ]]; do
+              device_status=$(adb devices | grep emulator | awk '{print $2}')
+              if [[ "$device_status" == "device" ]]; then
+                echo "✅ Emulator is online."
+                break
+              fi
+              echo "⏳ Emulator not ready yet... retry $((retries+1))/$max_retries"
+              adb devices
+              sleep 10
+              retries=$((retries + 1))
+            done
 
-            # Retry until boot is complete
+            if [[ "$device_status" != "device" ]]; then
+              echo "❌ Emulator never came online."
+              exit 1
+            fi
+
+            echo "🟡 Checking for boot completion..."
             boot_status=""
             retries=0
             while [[ "$boot_status" != "1" && $retries -lt 10 ]]; do
@@ -57,11 +74,10 @@ jobs:
             done
 
             if [[ "$boot_status" != "1" ]]; then
-              echo "❌ Emulator failed to boot in time"
+              echo "❌ Emulator failed to finish booting."
               exit 1
             fi
 
-            echo "✅ Emulator ready. Running Appium tests..."
+            echo "✅ Emulator is fully ready. Starting Appium tests..."
             export APPIUM_JS_PATH=/usr/local/bin/appium
-
             ./gradlew test
